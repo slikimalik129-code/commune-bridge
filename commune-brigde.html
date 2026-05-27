@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commune Bridge</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+    <style>
+        :root {
+            --primary: #2d6a4f;
+            --primary-light: #40916c;
+            --accent: #d9534f;
+            --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-bg: rgba(255, 255, 255, 0.95); /* Slightly less transparent */
+            --text-main: #243b53;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            margin: 0 auto;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.3s, color 0.3s;
+            content-visibility: auto;
+        }
+
+        body.high-contrast {
+            background-color: #000000;
+            color: #ffff00;
+        }
+
+        body.high-contrast button,
+        body.high-contrast textarea,
+        body.high-contrast #output {
+            background-color: #000 !important;
+            color: #ff0 !important;
+            border: 3px solid #ff0 !important;
+        }
+
+        body.high-contrast main {
+            background-color: #000;
+            border: 1px solid #ff0;
+        }
+
+        main {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Accessibility: Clearer focus styles for keyboard navigation */
+        button:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible,
+        input:focus-visible {
+            outline: 3px solid var(--primary-light); /* Stronger outline color */
+            outline-offset: 3px; /* Move outline away from element */
+            border-radius: 4px; /* Match button/input border-radius or soften */
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            padding: 10px;
+            padding: 12px; /* Increased padding for easier tapping */
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            resize: vertical;
+        }
+
+        button {
+            padding: 12px 20px;
+            padding: 14px 24px; /* Increased padding for larger tap targets */
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #output {
+            margin-top: 20px;
+            position: relative;
+            padding: 10px;
+            padding: 15px; /* Increased padding */
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 18px;
+            white-space: pre-wrap;
+        }
+
+        .pulse-container {
+            display: none;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        #historySection {
+            margin-top: 30px;
+            width: 100%;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        #historySection h2 {
+            font-size: 1.4rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        #historyLog {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .history-item {
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-size: 14px;
+        }
+
+        .history-item .time {
+            font-size: 11px;
+            color: #666;
+            display: block;
+        }
+
+        .bookmark-btn {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 0 0 10px !important;
+            float: right;
+            font-size: 1.2rem !important;
+            color: #ccc !important;
+            cursor: pointer;
+            min-width: 44px; /* W3C recommended minimum touch target size */
+            width: auto !important;
+            min-height: auto !important;
+        }
+
+        .history-item.bookmarked {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 4px solid #ffd700;
+        }
+
+        /* High contrast focus styles */
+        body.high-contrast button:focus-visible,
+        body.high-contrast textarea:focus-visible,
+        body.high-contrast select:focus-visible,
+        body.high-contrast input:focus-visible {
+            outline: 3px solid #0ff !important; /* Cyan outline for high contrast */
+        }
+        #historySearch {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .pulse {
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse-animation 1.5s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% {
+                box-shadow: 0 0 0 0px rgba(217, 83, 79, 0.7);
+            }
+
+            100% {
+                box-shadow: 0 0 0 20px rgba(217, 83, 79, 0);
+            }
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 12px;
+            padding: 5px 10px;
+            font-size: 14px; /* Slightly larger icon/text */
+            padding: 8px 12px; /* Increased padding for tap target */
+            background: #eee;
+            color: #333;
+        }
+
+        .alert-active {
+            animation: flash 0.5s infinite;
+        }
+
+        @keyframes flash {
+            0% {
+                background-color: red;
+            }
+
+            50% {
+                background-color: black;
+            }
+
+            100% {
+                background-color: red;
+            }
+        }
+
+        #emergencyBtn {
+            background-color: var(--accent);
+            width: 100%;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .animate {
+            animation: fadeIn 1s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Onboarding Overlay */
+        #onboarding {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .onboarding-card {
+            background: #fff;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .onboarding-card select,
+        .onboarding-card input {
+            width: 100%;
+            padding: 10px;
+            padding: 14px; /* Increased padding for easier tapping */
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="onboarding">
+        <div class="onboarding-card animate">
+            <h2>Welcome to Commune Bridge</h2>
+            <p>We are engineering a barrier-free future. Please tell us how we can best assist you.</p>
+
+            <input type="text" id="userName" placeholder="What is your name?">
+
+            <label for="langSelect">Preferred Language:</label>
+            <select id="langSelect">
+                <option value="en-US">English</option>
+                <option value="ss-SZ">siSwati</option>
+            </select>
+
+            <label for="modeSelect">I am identifying as:</label>
+            <select id="modeSelect">
+                <option value="standard">Standard User</option>
+                <option value="blind">Blind / Low Vision</option>
+                <option value="deaf">Deaf / Hard of Hearing</option>
+                <option value="mute">Mute / Speech Impaired</option>
+            </select>
+
+            <button id="startBtn" style="width:100%; margin-top:20px;">Get Started</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>Commune Bridge</h1>
+        <p style="text-align: center;">Engineering a barrier-free future in Eswatini.</p>
+    </header>
+
+    <main>
+        <textarea id="textInput" aria-label="Message input" placeholder="Type your message here..."></textarea>
+
+        <div class="controls">
+            <button id="speakBtn"><i class="fas fa-volume-up"></i> Speak</button>
+            <button id="listenBtn"><i class="fas fa-microphone"></i> Listen</button>
+            <button id="clearBtn" style="background-color: #627d98;"><i class="fas fa-eraser"></i> Clear</button>
+            <button id="contrastBtn" style="background-color: #486581;"><i class="fas fa-adjust"></i> Contrast</button>
+        </div>
+
+        <div class="pulse-container" id="pulseIndicator">
+            <div class="pulse"></div>
+        </div>
+
+        <div id="output" aria-live="polite">
+            <button id="copyBtn" class="copy-btn"><i class="fas fa-copy"></i> Copy</button>
+            <span id="transcriptText"></span>
+        </div>
+
+        <div id="historySection">
+            <h2>Recent History</h2>
+            <input type="text" id="historySearch" placeholder="Search history...">
+            <div id="historyLog"></div>
+            <button id="clearHistoryBtn"
+                style="background-color: #627d98; margin-top: 10px; font-size: 14px; width: auto;"><i
+                    class="fas fa-trash-alt"></i> Clear History</button>
+        </div>
+
+        <button id="emergencyBtn"><i class="fas fa-exclamation-triangle"></i> TRIGGER EMERGENCY</button>
+    </main>
+
+    <script>
+        const speakBtn = document.getElementById('speakBtn');
+        const listenBtn = document.getElementById('listenBtn');
+        const contrastBtn = document.getElementById('contrastBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const emergencyBtn = document.getElementById('emergencyBtn');
+        const textInput = document.getElementById('textInput');
+        const output = document.getElementById('output');
+        const onboarding = document.getElementById('onboarding');
+        const startBtn = document.getElementById('startBtn');
+        const userNameInput = document.getElementById('userName');
+        const langSelect = document.getElementById('langSelect');
+        const modeSelect = document.getElementById('modeSelect');
+        const pulseIndicator = document.getElementById('pulseIndicator');
+        const copyBtn = document.getElementById('copyBtn');
+        const transcriptText = document.getElementById('transcriptText');
+        const historyLog = document.getElementById('historyLog');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const historySearch = document.getElementById('historySearch');
+
+        let userLang = 'en-US';
+
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+
+        // Persistence Logic
+        function saveToHistory(type, text) {
+            const history = JSON.parse(localStorage.getItem('commune_history') || '[]');
+            const newEntry = {
+                id: Date.now(),
+                type: type,
+                text: text,
+                time: new Date().toLocaleTimeString(),
+                bookmarked: false
+            };
+            history.unshift(newEntry); // Newest first
+            localStorage.setItem('commune_history', JSON.stringify(history.slice(0, 50))); // Keep last 50
+            loadHistory(historySearch.value);
+        }
+
+        function toggleBookmark(id) {
+            const history = JSON.parse(localStorage.getItem('commune_history') || '[]');
+            const entry = history.find(item => item.id === id);
+            if (entry) {
+                entry.bookmarked = !entry.bookmarked;
+                localStorage.setItem('commune_history', JSON.stringify(history));
+                loadHistory(historySearch.value);
+            }
+        }
+
+        function loadHistory(searchTerm = '') {
+            const history = JSON.parse(localStorage.getItem('commune_history') || '[]');
+            historyLog.innerHTML = ''; // Clear existing entries
+
+            const filteredHistory = history.filter(item =>
+                item.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.type.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filteredHistory.length === 0) {
+                historyLog.innerHTML = '<p style="text-align:center; color:#888;">No matching history items.</p>';
+            }
+            filteredHistory.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `history-item ${item.bookmarked ? 'bookmarked' : ''}`;
+                div.innerHTML = `
+                    <button class="bookmark-btn" title="Toggle Bookmark" onclick="toggleBookmark(${item.id})">
+                        ${item.bookmarked ? '★' : '☆'}
+                    </button>
+                    <span class="time">${item.time}</span>
+                    <strong>${item.type}:</strong> ${item.text}
+                `;
+                historyLog.appendChild(div);
+            });
+        }
+
+        // Performance Optimization: Debounce Search
+        function debounce(func, timeout = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+        }
+
+        const optimizedSearch = debounce((val) => {
+            loadHistory(val);
+        }, 250);
+
+        historySearch.addEventListener('input', (event) => optimizedSearch(event.target.value));
+
+        clearHistoryBtn.addEventListener('click', () => {
+            localStorage.removeItem('commune_history');
+            loadHistory();
+        });
+
+        loadHistory(); // Load on startup
+
+        startBtn.addEventListener('click', () => {
+            const name = userNameInput.value || "Friend";
+            userLang = langSelect.value;
+            const mode = modeSelect.value;
+
+            // Update document language for accessibility
+            document.documentElement.lang = userLang.split('-')[0];
+
+            onboarding.classList.add('hidden');
+
+            // Voice Welcome
+            const welcomeText = userLang === 'ss-SZ'
+                ? `Sawubona ${name}, wemukelekile e-Commune Bridge.`
+                : `Hello ${name}, welcome to Commune Bridge. We are here to help.`;
+
+            const msg = new SpeechSynthesisUtterance(welcomeText);
+            msg.lang = userLang;
+            window.speechSynthesis.speak(msg);
+
+            if (mode === 'blind') {
+                document.body.classList.add('high-contrast');
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            transcriptText.textContent = '';
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const text = transcriptText.textContent;
+            if (text) {
+                navigator.clipboard.writeText(text);
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy', 2000);
+            }
+        });
+
+        speakBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (text) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = userLang;
+                window.speechSynthesis.speak(utterance);
+                saveToHistory('You said', text);
+            } else {
+                alert('Please enter some text to speak.');
+            }
+        });
+
+        contrastBtn.addEventListener('click', () => {
+            document.body.classList.toggle('high-contrast');
+            const isHigh = document.body.classList.contains('high-contrast');
+            const msg = new SpeechSynthesisUtterance(isHigh ? "High contrast enabled" : "Standard mode enabled");
+            window.speechSynthesis.speak(msg);
+        });
+
+        emergencyBtn.addEventListener('click', () => {
+            document.body.classList.add('alert-active');
+            // Haptic Feedback for Emergency
+            if ("vibrate" in navigator) {
+                navigator.vibrate([500, 200, 500, 200, 500]);
+            }
+            const alertMsg = new SpeechSynthesisUtterance("Emergency alert triggered. Please seek assistance immediately.");
+            window.speechSynthesis.speak(alertMsg);
+            setTimeout(() => {
+                document.body.classList.remove('alert-active');
+            }, 5000);
+        });
+
+        listenBtn.addEventListener('click', () => {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Speech recognition not supported in this browser.');
+                return;
+            }
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = userLang;
+            recognition.interimResults = true;
+            recognition.continuous = true;
+
+            listenBtn.disabled = true;
+            listenBtn.innerHTML = '<i class="fas fa-microphone"></i> Listening...';
+            pulseIndicator.style.display = 'flex';
+
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + ' ';
+                    }
+                }
+                if (finalTranscript) {
+                    transcriptText.textContent += finalTranscript;
+                    saveToHistory('Heard', finalTranscript.trim());
+                    output.scrollTop = output.scrollHeight;
+                    output.classList.add('animate');
+                    setTimeout(() => output.classList.remove('animate'), 500);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                alert('Speech recognition error: ' + event.error);
+            };
+
+            recognition.onend = () => {
+                console.log('Speech recognition ended.');
+                listenBtn.disabled = false;
+                listenBtn.innerHTML = '<i class="fas fa-microphone"></i> Listen';
+                pulseIndicator.style.display = 'none';
+            };
+
+            recognition.start();
+        });
+    </script>
+</body>
+
+</html>
